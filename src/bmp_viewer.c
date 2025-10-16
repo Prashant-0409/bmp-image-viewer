@@ -1,7 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <SDL2/SDL.h>
+#include <stdio.h>      // Input/Output functions
+#include <stdlib.h>     // Memory & utility functions
+#include <stdint.h>     // Fixed-width integer types
+#include <SDL2/SDL.h>   // Graphics & window handling
 
 // Bitmap File Header (14 bytes)
 #pragma pack(push, 1)
@@ -41,6 +41,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Opening the Image File
     FILE *fp = fopen(argv[1], "rb");
     if (!fp)
     {
@@ -51,9 +52,11 @@ int main(int argc, char *argv[])
     BITMAPFILEHEADER fileHeader;
     BITMAPINFOHEADER infoHeader;
 
+    // Reading the BitMapFileHeader and BitMapInfoHeader
     fread(&fileHeader, sizeof(BITMAPFILEHEADER), 1, fp);
     fread(&infoHeader, sizeof(BITMAPINFOHEADER), 1, fp);
 
+    // Checking if the Image File is actually an BMP File
     if (fileHeader.bfType != 0x4D42)
     {
         printf("Not a valid BMP file!\n");
@@ -61,6 +64,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Checking if the Image is Uncompressed and 24-Bit BMP Image
     if (infoHeader.biBitCount != 24 || infoHeader.biCompression != 0)
     {
         printf("Only uncompressed 24-bit BMP supported!\n");
@@ -68,15 +72,19 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Width and Height of the Image 
+    // Row padded calculation
     int width = infoHeader.biWidth;
     int height = infoHeader.biHeight;
     int row_padded = (width * 3 + 3) & (~3);
 
+    // Reading the Pixel Data form the Image File
     unsigned char *data = (unsigned char *)malloc(row_padded * height);
     fseek(fp, fileHeader.bfOffBits, SEEK_SET);
     fread(data, row_padded, height, fp);
     fclose(fp);
 
+    // Initializing the SDL Vidoe Subsystem
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
     {
         printf("SDL Error: %s\n", SDL_GetError());
@@ -84,16 +92,19 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    SDL_Window *window = SDL_CreateWindow("BMP Viewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
+    // SDL Window and Surface Creation
+    SDL_Window *window = SDL_CreateWindow("BMP Image Viewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
     SDL_Surface *surface = SDL_GetWindowSurface(window);
 
-    // Draw image
-    draw_image(data, width, height, row_padded, surface);
-    SDL_UpdateWindowSurface(window);
+    
+    draw_image(data, width, height, row_padded, surface);   // Draw image
+    SDL_UpdateWindowSurface(window);        // Update Window Surface
 
+    // Event initialization to monitor user actions
     SDL_Event event;
     SDL_bool running = SDL_TRUE;
 
+    // Main Loop
     while (running)
     {
         while (SDL_PollEvent(&event))
@@ -105,9 +116,9 @@ int main(int argc, char *argv[])
         }
     }
 
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-    free(data);
+    SDL_DestroyWindow(window);      // Destroying SDL Window 
+    SDL_Quit();                 // Close all SDL subsystems
+    free(data);             // Free allocated memory
 
     return 0;
 }
@@ -117,11 +128,11 @@ void draw_image(unsigned char *data, int width, int height, int row_padded, SDL_
     Uint32 color;
     SDL_Rect rect;
 
-    for (int y = 0; y < height; y++)
+    for (int y = 0; y < height; y++)        // Looping in y-axis
     {
-        for (int x = 0; x < width; x++)
+        for (int x = 0; x < width; x++)     // Looping in x-axis
         {
-            int index = y * row_padded + x * 3;
+            int index = y * row_padded + x * 3;     // Index calculation
 
             unsigned char blue = data[index];
             unsigned char green = data[index + 1];
@@ -130,11 +141,11 @@ void draw_image(unsigned char *data, int width, int height, int row_padded, SDL_
             color = SDL_MapRGB(surface->format, red, green, blue);
 
             rect.x = x;
-            rect.y = height - y - 1; // BMP bottom-up hota hai
+            rect.y = height - y - 1; // BMP is aligned from bottom-top
             rect.w = 1;
             rect.h = 1;
 
-            SDL_FillRect(surface, &rect, color);
+            SDL_FillRect(surface, &rect, color);        // Displaying the Pixel on the Screen
         }
     }
 }
