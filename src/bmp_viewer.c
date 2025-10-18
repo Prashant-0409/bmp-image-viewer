@@ -1,7 +1,8 @@
-#include <stdio.h>      // Input/Output functions
-#include <stdlib.h>     // Memory & utility functions
-#include <stdint.h>     // Fixed-width integer types
-#include <SDL2/SDL.h>   // Graphics & window handling
+#include <stdio.h>    // Input/Output functions
+#include <stdlib.h>   // Memory & utility functions
+#include <stdint.h>   // Fixed-width integer types
+#include <SDL2/SDL.h> // Graphics & window handling
+#include "features.h"
 
 // Bitmap File Header (14 bytes)
 #pragma pack(push, 1)
@@ -31,10 +32,9 @@ typedef struct
 } BITMAPINFOHEADER;
 #pragma pack(pop)
 
-void draw_image(unsigned char *data, int width, int height, int row_padded, SDL_Surface *surface);
-
 int main(int argc, char *argv[])
 {
+    int zoom_factor = 1;
     if (argc != 2)
     {
         printf("Usage: %s <image.bmp>\n", argv[0]);
@@ -72,33 +72,37 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // Width and Height of the Image 
+    // Width and Height of the Image
     // Row padded calculation
     int width = infoHeader.biWidth;
     int height = infoHeader.biHeight;
     int row_padded = (width * 3 + 3) & (~3);
 
     // Reading the Pixel Data form the Image File
-    unsigned char *data = (unsigned char *)malloc(row_padded * height);
+    unsigned char *data_BMP = (unsigned char *)malloc(row_padded * height);
+    unsigned char *data_aligned = (unsigned char *)malloc(width * height * 3);
     fseek(fp, fileHeader.bfOffBits, SEEK_SET);
-    fread(data, row_padded, height, fp);
+    fread(data_BMP, row_padded, height, fp);
     fclose(fp);
 
     // Initializing the SDL Vidoe Subsystem
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
     {
         printf("SDL Error: %s\n", SDL_GetError());
-        free(data);
+        free(data_BMP);
+        free(data_aligned);
         return 1;
     }
+    align_image_data(data_BMP, data_aligned, width, height, row_padded);
 
     // SDL Window and Surface Creation
-    SDL_Window *window = SDL_CreateWindow("BMP Image Viewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
+    SDL_Window *window = SDL_CreateWindow("BMP Image Viewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width * zoom_factor, height * zoom_factor, SDL_WINDOW_SHOWN);
     SDL_Surface *surface = SDL_GetWindowSurface(window);
 
-    
-    draw_image(data, width, height, row_padded, surface);   // Draw image
-    SDL_UpdateWindowSurface(window);        // Update Window Surface
+    SDL_Keycode key;
+
+    zoom(data_aligned, width, height, surface, zoom_factor);
+    SDL_UpdateWindowSurface(window); // Update Window Surface
 
     // Event initialization to monitor user actions
     SDL_Event event;
@@ -113,39 +117,33 @@ int main(int argc, char *argv[])
             {
                 running = SDL_FALSE;
             }
+            else if (event.type == SDL_KEYDOWN)
+            {
+                SDL_Keycode key = event.key.keysym.sym;
+
+                if (key == SDLK_PLUS || key == SDLK_EQUALS || key == SDLK_KP_PLUS)
+                {
+                    if (zoom_factor < 3)
+                        zoom_factor++;
+                }
+                else if (key == SDLK_MINUS || key == SDLK_KP_MINUS)
+                {
+                    if (zoom_factor > 1)
+                        zoom_factor--;
+                }
+
+                SDL_SetWindowSize(window, width * zoom_factor, height * zoom_factor);
+                surface = SDL_GetWindowSurface(window);
+                zoom(data_aligned, width, height, surface, zoom_factor);
+                SDL_UpdateWindowSurface(window);
+            }
         }
     }
 
-    SDL_DestroyWindow(window);      // Destroying SDL Window 
-    SDL_Quit();                 // Close all SDL subsystems
-    free(data);             // Free allocated memory
+    SDL_DestroyWindow(window); // Destroying SDL Window
+    SDL_Quit();                // Close all SDL subsystems
+    free(data_BMP);            // Free allocated memory
+    free(data_aligned);        // Free allocated memory
 
     return 0;
-}
-
-void draw_image(unsigned char *data, int width, int height, int row_padded, SDL_Surface *surface)
-{
-    Uint32 color;
-    SDL_Rect rect;
-
-    for (int y = 0; y < height; y++)        // Looping in y-axis
-    {
-        for (int x = 0; x < width; x++)     // Looping in x-axis
-        {
-            int index = y * row_padded + x * 3;     // Index calculation
-
-            unsigned char blue = data[index];
-            unsigned char green = data[index + 1];
-            unsigned char red = data[index + 2];
-
-            color = SDL_MapRGB(surface->format, red, green, blue);
-
-            rect.x = x;
-            rect.y = height - y - 1; // BMP is aligned from bottom-top
-            rect.w = 1;
-            rect.h = 1;
-
-            SDL_FillRect(surface, &rect, color);        // Displaying the Pixel on the Screen
-        }
-    }
 }
