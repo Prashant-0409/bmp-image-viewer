@@ -2,7 +2,6 @@
 #include <stdlib.h>   // Memory & utility functions
 #include <stdint.h>   // Fixed-width integer types
 #include <SDL2/SDL.h> // Graphics & window handling
-#include "features.h"
 
 // Bitmap File Header (14 bytes)
 #pragma pack(push, 1)
@@ -14,8 +13,10 @@ typedef struct
     uint16_t bfReserved2; // Reserved, must be 0
     uint32_t bfOffBits;   // Offset to pixel data
 } BITMAPFILEHEADER;
+#pragma pack(pop)
 
 // DIB Header (BITMAPINFOHEADER - 40 bytes)
+#pragma pack(push, 1)
 typedef struct
 {
     uint32_t biSize;         // Header size (40 bytes)
@@ -32,6 +33,11 @@ typedef struct
 } BITMAPINFOHEADER;
 #pragma pack(pop)
 
+// function declarations     
+void align_image_data(unsigned char *data_BMP, unsigned char *data_aligned, int width, int height, int row_padded);
+void zoom(unsigned char *data_aligned, int width, int height, SDL_Surface *surface, int zoom_factor);
+
+// main function
 int main(int argc, char *argv[])
 {
     int zoom_factor = 1;
