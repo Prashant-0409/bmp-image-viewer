@@ -2,7 +2,7 @@
 A simple BMP image viewer written in C without using any external image libraries.
 
 ## Description
-It is a very simple image viewer for 24-bit BMP image files. It does not use any external image libraries, relyes on SDL2 a cross platform multimedia library. It works by open a BMP image file in the read mode and then extracts header meta data and all the pixel data used to render the picture. It uses a simple rendering technique which renders the whole image pixel by pixel.
+It is a very simple image viewer for 24-bit BMP image files. It does not use any external image libraries, relyes on SDL2 a cross platform multimedia library for rendering the image. It works by open a BMP image file in the read mode and then extracts header meta data and all the pixel data used to render the picture. It uses a simple rendering technique which renders the whole image pixel by pixel.
 
 ## Getting Started
 
