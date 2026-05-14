@@ -1,4 +1,4 @@
-#include <SDL2/SDL.h>
+#include "features.h"
 
 // Functions Definition
 void align_image_data(unsigned char *data_BMP, unsigned char *data_aligned, int width, int height, int row_padded)
