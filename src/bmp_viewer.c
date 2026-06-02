@@ -4,6 +4,7 @@
 #include <SDL2/SDL.h> // Graphics & window handling
 #include "features.h"
 
+#define BLACK_COLOR 0x000000 
 // Bitmap File Header (14 bytes)
 #pragma pack(push, 1)
 typedef struct
@@ -78,15 +79,18 @@ int main(int argc, char *argv[])
 
     // Width and Height of the Image
     // Row padded calculation
-    int width = infoHeader.biWidth;
-    int height = infoHeader.biHeight;
-    int row_padded = (width * 3 + 3) & (~3);
+    int image_width = infoHeader.biWidth;
+    int image_height = infoHeader.biHeight;
+    int row_padded = (image_width * 3 + 3) & (~3);
+
+	int win_height = 600;
+	int win_width = 900;
 
     // Reading the Pixel Data form the Image File
-    unsigned char *data_BMP = (unsigned char *)malloc(row_padded * height);
-    unsigned char *data_aligned = (unsigned char *)malloc(width * height * 3);
+    unsigned char *data_BMP = (unsigned char *)malloc(row_padded * image_height);
+    unsigned char *data_aligned = (unsigned char *)malloc(image_width * image_height * 3);
     fseek(fp, fileHeader.bfOffBits, SEEK_SET);
-    fread(data_BMP, row_padded, height, fp);
+    fread(data_BMP, row_padded, image_height, fp);
     fclose(fp);
 
     // Initializing the SDL Vidoe Subsystem
@@ -97,15 +101,15 @@ int main(int argc, char *argv[])
         free(data_aligned);
         return 1;
     }
-    align_image_data(data_BMP, data_aligned, width, height, row_padded);
+    align_image_data(data_BMP, data_aligned, image_width, image_height, row_padded);
 
     // SDL Window and Surface Creation
-    SDL_Window *window = SDL_CreateWindow("BMP Image Viewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width * zoom_factor, height * zoom_factor, SDL_WINDOW_SHOWN);
+    SDL_Window *window = SDL_CreateWindow("BMP Image Viewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, win_width * zoom_factor, win_height * zoom_factor, SDL_WINDOW_SHOWN);
     SDL_Surface *surface = SDL_GetWindowSurface(window);
 
     SDL_Keycode key;
 
-    zoom(data_aligned, width, height, surface, zoom_factor);
+    display(data_aligned, image_width, image_height,win_height,win_width, surface, zoom_factor);
     SDL_UpdateWindowSurface(window); // Update Window Surface
 
     // Event initialization to monitor user actions
@@ -118,9 +122,7 @@ int main(int argc, char *argv[])
         while (SDL_PollEvent(&event))
         {
             if (event.type == SDL_QUIT)
-            {
                 running = SDL_FALSE;
-            }
             else if (event.type == SDL_KEYDOWN)
             {
                 SDL_Keycode key = event.key.keysym.sym;
@@ -135,10 +137,13 @@ int main(int argc, char *argv[])
                     if (zoom_factor > 1)
                         zoom_factor--;
                 }
+				else if(key == SDLK_w)
+					running = SDL_FALSE;
 
-                SDL_SetWindowSize(window, width * zoom_factor, height * zoom_factor);
-                surface = SDL_GetWindowSurface(window);
-                zoom(data_aligned, width, height, surface, zoom_factor);
+                //SDL_SetWindowSize(window, win_width, win_height);
+                //surface = SDL_GetWindowSurface(window);
+				SDL_FillRect(surface,NULL,BLACK_COLOR);
+                display(data_aligned, image_width, image_height,win_height,win_width, surface, zoom_factor);
                 SDL_UpdateWindowSurface(window);
             }
         }
